@@ -18,7 +18,8 @@ Maintaining at 1.7.1 to see if the position:sticky polyfill still applies
 
 Version|Date|Comments
 -------|----|--------
-1.0|April 06, 2019|Initial release
+1.0.0.0|April 06, 2019|Initial release
+1.0.0.1|April 07, 2019|Navigate to anchor when Show Title is unchecked
 
 ## Disclaimer
 **THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.**
