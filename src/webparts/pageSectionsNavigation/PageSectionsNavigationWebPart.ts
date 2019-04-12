@@ -1,114 +1,168 @@
-import * as React from 'react';
-import * as ReactDom from 'react-dom';
-import { Version, DisplayMode } from '@microsoft/sp-core-library';
+import * as React from "react";
+import * as ReactDom from "react-dom";
+import { Version, DisplayMode } from "@microsoft/sp-core-library";
 import {
   BaseClientSideWebPart,
   IPropertyPaneConfiguration,
   PropertyPaneDropdown,
-  PropertyPaneToggle,
   PropertyPaneChoiceGroup,
   PropertyPaneCheckbox,
   PropertyPaneTextField
-} from '@microsoft/sp-webpart-base';
+} from "@microsoft/sp-webpart-base";
 //import { SPComponentLoader } from '@microsoft/sp-loader';
-import * as strings from 'PageSectionsNavigationStrings';
-import { PageSectionsNavigation, IPageSectionsNavigationProps } from './components/PageSectionsNavigation';
-import { IDynamicDataSource, IDynamicDataCallables, IDynamicDataPropertyDefinition } from '@microsoft/sp-dynamic-data';
-import { IAnchorItem } from '../../common/model';
-import { NavPosition, NavAlign } from '../../common/types';
+import * as strings from "PageSectionsNavigationStrings";
+import {
+  PageSectionsNavigation,
+  IPageSectionsNavigationProps
+} from "./components/PageSectionsNavigation";
+import {
+  IDynamicDataSource,
+  IDynamicDataCallables,
+  IDynamicDataPropertyDefinition
+} from "@microsoft/sp-dynamic-data";
+import { IAnchorItem } from "../../common/model";
+import { NavPosition, NavAlign, NavTheme } from "../../common/types";
 
 export interface IPageSectionsNavigationWebPartProps {
   scrollBehavior: ScrollBehavior;
   position: NavPosition;
-  isDark: boolean;
+  isDark?: boolean;
+  theme: NavTheme;
   align: NavAlign;
   showHomeItem: boolean;
   homeItemText: string;
   customCssUrl: string;
 }
 
-export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart<IPageSectionsNavigationWebPartProps> implements IDynamicDataCallables {
-
+export default class PageSectionsNavigationWebPart
+  extends BaseClientSideWebPart<IPageSectionsNavigationWebPartProps>
+  implements IDynamicDataCallables {
+  // "Anchor" data sources
   private _dataSources: IDynamicDataSource[] = [];
-  //private _anchors: IAnchorItem[];
-
 
   protected onInit(): Promise<void> {
     const { customCssUrl } = this.properties;
 
     this._onAnchorChanged = this._onAnchorChanged.bind(this);
+    this._availableSourcesChanged = this._availableSourcesChanged.bind(this); // pr #837
+    // getting data sources that have already been added on the page
     this._initDataSources();
-    this.context.dynamicDataProvider.registerAvailableSourcesChanged(this._initDataSources.bind(this, true));
+    // registering for changes in available datasources
+    /* this.context.dynamicDataProvider.registerAvailableSourcesChanged(
+      this._initDataSources.bind(this, true)
+    ); pr#837 */
+    this.context.dynamicDataProvider.registerAvailableSourcesChanged(
+      this._availableSourcesChanged
+    ); // pr#837
 
     this._addCustomCss(customCssUrl);
 
+    // registering current web part as a data source
     this.context.dynamicDataSourceManager.initializeSource(this);
 
     return super.onInit();
   }
 
   public render(): void {
-
-    const anchors = this._dataSources && this._dataSources.map(ds => ds.getPropertyValue('anchor') as IAnchorItem);
+    const anchors =
+      this._dataSources &&
+      this._dataSources.map(ds => ds.getPropertyValue("anchor") as IAnchorItem);
     const {
       scrollBehavior,
       position,
       isDark,
+      theme,
       align,
       showHomeItem,
       homeItemText
     } = this.properties;
-    const element: React.ReactElement<IPageSectionsNavigationProps> = React.createElement(
-      PageSectionsNavigation,
-      {
-        anchors: anchors,
-        scrollBehavior: scrollBehavior,
-        position: position,
-        theme: isDark ? 'dark' : 'light',
-        align: align,
-        isEditMode: this.displayMode === DisplayMode.Edit,
-        homeItem: showHomeItem && homeItemText
-      }
-    );
+    const element: React.ReactElement<
+      IPageSectionsNavigationProps
+    > = React.createElement(PageSectionsNavigation, {
+      anchors: anchors,
+      scrollBehavior: scrollBehavior,
+      position: position,
+      theme: theme ? theme : isDark ? "dark" : "light",
+      align: align,
+      isEditMode: this.displayMode === DisplayMode.Edit,
+      homeItem: showHomeItem ? homeItemText : ""
+    });
 
     ReactDom.render(element, this.domElement);
   }
 
-  public getPropertyDefinitions(): ReadonlyArray<IDynamicDataPropertyDefinition> {
-    return [{
-      id: 'position',
-      title: 'position'
-    }];
+  /**
+   * implementation of getPropertyDefinitions from IDynamicDataCallables
+   */
+  public getPropertyDefinitions(): ReadonlyArray<
+    IDynamicDataPropertyDefinition
+  > {
+    return [
+      {
+        id: "position",
+        title: "position"
+      }
+    ];
   }
+
+  /**
+   * implementation of getPropertyValue from IDynamicDataCallables
+   * @param propertyId property Id
+   */
   public getPropertyValue(propertyId: string): NavPosition {
     switch (propertyId) {
-      case 'position':
+      case "position":
         return this.properties.position;
     }
 
-    throw new Error('Bad property id');
+    throw new Error("Bad property id");
   }
 
   protected onDispose(): void {
+    this.context.dynamicDataProvider.unregisterAvailableSourcesChanged(
+      this._availableSourcesChanged
+    );
+    if (this._dataSources) {
+      this._dataSources.forEach(ds => {
+        this.context.dynamicDataProvider.unregisterPropertyChanged(
+          ds.id,
+          "anchor",
+          this._onAnchorChanged
+        );
+      });
+      delete this._dataSources;
+    } //pr#837
     ReactDom.unmountComponentAtNode(this.domElement);
+    super.onDispose(); //pr#837
   }
 
   protected get dataVersion(): Version {
-    return Version.parse('1.0');
+    return Version.parse("1.0");
   }
 
-  protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: any, newValue: any) {
-    if (propertyPath === 'position') {
-      this.context.dynamicDataSourceManager.notifyPropertyChanged('position');
-    }
-    else if (propertyPath === 'customCssUrl') {
+  /**
+   * Manual handling of changed properties.
+   * If position has been changed we need to notify subscribers
+   * If custom css has been changed we need to add new CSS to the page
+   * @param propertyPath
+   * @param oldValue
+   * @param newValue
+   */
+  protected onPropertyPaneFieldChanged(
+    propertyPath: string,
+    oldValue: any,
+    newValue: any
+  ) {
+    if (propertyPath === "position") {
+      this.context.dynamicDataSourceManager.notifyPropertyChanged("position");
+    } else if (propertyPath === "customCssUrl") {
       //
       // removing prev css
       //
       if (oldValue) {
         const oldCssLink = this._getCssLink(oldValue);
         if (oldCssLink) {
-          oldCssLink.parentElement.removeChild(oldCssLink);
+          oldCssLink.parentElement!.removeChild(oldCssLink);
         }
       }
 
@@ -117,81 +171,112 @@ export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
-    const align = this.properties.align || 'left';
+    const align = this.properties.align || "left";
+    const {
+      scrollBehavior,
+      position,
+      theme,
+      isDark,
+      showHomeItem,
+      homeItemText,
+      customCssUrl
+    } = this.properties;
     return {
       pages: [
         {
           header: {
-            description: ''
+            description: "Collaboration Platform Specialists@ResMed"
           },
           groups: [
             {
               groupName: strings.NavGroupName,
               groupFields: [
-                PropertyPaneDropdown('scrollBehavior', {
+                PropertyPaneDropdown("scrollBehavior", {
                   label: strings.ScrollBehaviorFieldLabel,
-                  options: [{
-                    key: 'auto',
-                    text: strings.AutoScrollBehavior
-                  }, {
-                    key: 'smooth',
-                    text: strings.SmoothScrollBehavior
-                  }],
-                  selectedKey: this.properties.scrollBehavior || 'auto'
+                  options: [
+                    {
+                      key: "auto",
+                      text: strings.AutoScrollBehavior
+                    },
+                    {
+                      key: "smooth",
+                      text: strings.SmoothScrollBehavior
+                    }
+                  ],
+                  selectedKey: scrollBehavior || "auto"
                 }),
-                PropertyPaneDropdown('position', {
+                PropertyPaneDropdown("position", {
                   label: strings.PositionLabel,
-                  options: [{
-                    key: 'section',
-                    text: strings.PositionSection
-                  }, {
-                    key: 'top',
-                    text: strings.PositionTop
-                  }],
-                  selectedKey: this.properties.position || 'top'
+                  options: [
+                    {
+                      key: "section",
+                      text: strings.PositionSection
+                    },
+                    {
+                      key: "top",
+                      text: strings.PositionTop
+                    }
+                  ],
+                  selectedKey: position || "top"
                 }),
-                PropertyPaneToggle('isDark', {
+                PropertyPaneDropdown("theme", {
                   label: strings.ThemeLabel,
-                  offText: strings.ThemeLight,
-                  onText: strings.ThemeDark,
-                  checked: !!this.properties.isDark
+                  options: [
+                    {
+                      key: "light",
+                      text: strings.ThemeLight
+                    },
+                    {
+                      key: "theme",
+                      text: strings.ThemeTheme
+                    },
+                    {
+                      key: "dark",
+                      text: strings.ThemeDark
+                    }
+                  ],
+                  selectedKey: theme ? theme : isDark ? "dark" : "light"
                 }),
-                PropertyPaneChoiceGroup('align', {
+                PropertyPaneChoiceGroup("align", {
                   label: strings.AlignLabel,
-                  options: [{
-                    key: 'flex-start',
-                    text: strings.AlignLeft,
-                    checked: align === 'flex-start',
-                    iconProps: {
-                      officeFabricIconFontName: 'AlignLeft'
+                  options: [
+                    {
+                      key: "flex-start",
+                      text: strings.AlignLeft,
+                      checked: align === "flex-start",
+                      iconProps: {
+                        officeFabricIconFontName: "AlignLeft"
+                      }
+                    },
+                    {
+                      key: "center",
+                      text: strings.AlignCenter,
+                      checked: align === "center",
+                      iconProps: {
+                        officeFabricIconFontName: "AlignCenter"
+                      }
+                    },
+                    {
+                      key: "flex-end",
+                      text: strings.AlignRight,
+                      checked: align === "flex-end",
+                      iconProps: {
+                        officeFabricIconFontName: "AlignRight"
+                      }
                     }
-                  }, {
-                    key: 'center',
-                    text: strings.AlignCenter,
-                    checked: align === 'center',
-                    iconProps: {
-                      officeFabricIconFontName: 'AlignCenter'
-                    }
-                  }, {
-                    key: 'flex-end',
-                    text: strings.AlignRight,
-                    checked: align === 'flex-end',
-                    iconProps: {
-                      officeFabricIconFontName: 'AlignRight'
-                    }
-                  }]
+                  ]
                 }),
-                PropertyPaneCheckbox('showHomeItem', {
+                PropertyPaneCheckbox("showHomeItem", {
                   text: strings.HomeNavItemCbxLabel,
-                  checked: this.properties.showHomeItem
+                  checked: showHomeItem
                 }),
-                PropertyPaneTextField('homeItemText', {
+                PropertyPaneTextField("homeItemText", {
                   label: strings.HomeNavItemTextLabel,
-                  value: this.properties.homeItemText || strings.HomeNavItemDefaultText
+                  value: homeItemText || strings.HomeNavItemDefaultText
                 }),
-                PropertyPaneTextField('customCssUrl', {
+                PropertyPaneTextField("customCssUrl", {
                   label: strings.CustomCSSLabel,
-                  value: this.properties.customCssUrl
+                  value: customCssUrl
                 })
               ]
             }
@@ -201,10 +286,20 @@ export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart
     };
   }
 
+  private _availableSourcesChanged() {
+    this._initDataSources(true);
+  }
+
+  /**
+   * Initializes collection of "Anchor" data soures based on collection of existing page's data sources
+   * @param reRender specifies if the web part should be rerendered
+   */
   private _initDataSources(reRender?: boolean) {
+    // all data sources on the page
     const availableDataSources = this.context.dynamicDataProvider.getAvailableSources();
 
     if (availableDataSources && availableDataSources.length) {
+      // "Ahchor" data sources cached in the web part from prev call
       const dataSources = this._dataSources;
       //
       // removing deleted data sources if any
@@ -215,9 +310,12 @@ export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart
         if (availableDataSourcesIds.indexOf(dataSource.id) == -1) {
           dataSources.splice(i, 1);
           try {
-            this.context.dynamicDataProvider.unregisterPropertyChanged(dataSource.id, 'anchor', this._onAnchorChanged);
-          }
-          catch (err) { }
+            this.context.dynamicDataProvider.unregisterPropertyChanged(
+              dataSource.id,
+              "anchor",
+              this._onAnchorChanged
+            );
+          } catch (err) {}
           i--;
           len--;
         }
@@ -228,29 +326,36 @@ export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart
       //
       for (let i = 0, len = availableDataSources.length; i < len; i++) {
         let dataSource = availableDataSources[i];
-        if (!dataSource.getPropertyDefinitions().filter(pd => pd.id === 'anchor').length) {
+        if (
+          !dataSource.getPropertyDefinitions().filter(pd => pd.id === "anchor")
+            .length
+        ) {
           continue; // we don't need data sources other than anchors
         }
-        if (!dataSources || !dataSources.filter(ds => ds.id === dataSource.id).length) {
+        if (
+          !dataSources ||
+          !dataSources.filter(ds => ds.id === dataSource.id).length
+        ) {
           dataSources.push(dataSource);
-          this.context.dynamicDataProvider.registerPropertyChanged(dataSource.id, 'anchor', this._onAnchorChanged);
-          //this._anchors.push(dataSource.getPropertyValue('anchor') as IAnchorItem);
+          this.context.dynamicDataProvider.registerPropertyChanged(
+            dataSource.id,
+            "anchor",
+            this._onAnchorChanged
+          );
         }
       }
     }
-
-    // TODO: unregister events for deleted data sources
-
-    //this._dataSources = availableDataSources;
 
     if (reRender) {
       this.render();
     }
   }
 
+  /**
+   * Fired when any of anchors has been changed
+   */
   private _onAnchorChanged() {
     this.render();
-    //console.log(ds.getPropertyValue('anchor'));
   }
 
   private _addCustomCss(customCssUrl: string) {
@@ -260,9 +365,9 @@ export default class PageSectionsNavigationWebPart extends BaseClientSideWebPart
       const head = document.head;
       let styleEl = this._getCssLink(customCssUrl);
       if (!styleEl) {
-        styleEl = document.createElement('link');
-        styleEl.setAttribute('rel', 'stylesheet');
-        styleEl.setAttribute('href', customCssUrl);
+        styleEl = document.createElement("link");
+        styleEl.setAttribute("rel", "stylesheet");
+        styleEl.setAttribute("href", customCssUrl);
         head.appendChild(styleEl);
       }
     }

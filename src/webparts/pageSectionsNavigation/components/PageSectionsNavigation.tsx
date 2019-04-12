@@ -1,12 +1,16 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import styles from './PageSectionsNavigation.module.scss';
-import { IAnchorItem } from '../../../common/model';
-import { css, getDocument, ICssInput } from 'office-ui-fabric-react/lib/Utilities';
-import * as strings from 'PageSectionsNavigationStrings';
-import Scrollparent from 'scrollparent';
-import smoothscroll from 'smoothscroll-polyfill';
-import { NavTheme, NavAlign, NavPosition } from '../../../common/types';
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import styles from "./PageSectionsNavigation.module.scss";
+import { IAnchorItem } from "../../../common/model";
+import {
+  css,
+  getDocument,
+  ICssInput
+} from "office-ui-fabric-react/lib/Utilities";
+import * as strings from "PageSectionsNavigationStrings";
+import Scrollparent from "scrollparent";
+import smoothscroll from "smoothscroll-polyfill";
+import { NavTheme, NavAlign, NavPosition } from "../../../common/types";
 
 // kick off the polyfill!
 smoothscroll.polyfill();
@@ -25,19 +29,26 @@ export interface IPageSectionsNavigationState {
   isMounted?: boolean;
 }
 
-export class PageSectionsNavigation extends React.Component<IPageSectionsNavigationProps, IPageSectionsNavigationState> {
-
+export class PageSectionsNavigation extends React.Component<
+  IPageSectionsNavigationProps,
+  IPageSectionsNavigationState
+> {
+  // layer div to host navigation elements OUTSIDE of normal DOM hierarchy
   private _layerElement: HTMLElement | undefined;
+  // parent node where the current component should be renderred
   private _host: Node;
+  // span DOM element that is renderered IN normal DOM hierarchy
   private _sectionHostSpanRef = React.createRef<HTMLSpanElement>();
+  // first scrollable parent in normal DOM hierarchy. Needed for Home click implementation
   private _scrollableParent: Element;
 
-  private readonly _pageCanvasId = 'spPageCanvasContent';
+  // page canvas DOM element id
+  private readonly _pageCanvasId = "spPageCanvasContent";
+  // page layout element selector
   private readonly _pageLayoutSelector = '[class*="layoutWrapper_"]';
 
   constructor(props: IPageSectionsNavigationProps) {
     super(props);
-
 
     this.state = {
       isMounted: false
@@ -50,10 +61,11 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
 
   public componentWillUpdate(nextProps: IPageSectionsNavigationProps) {
     if (nextProps.position !== this.props.position) {
+      // updating layer based on position
       this._removeLayerElement();
       this._layerElement = this._getLayerElement(nextProps.position);
-    }
-    else if (!this._layerElement) {
+    } else if (!this._layerElement) {
+      // creating layer if not exist
       this._layerElement = this._getLayerElement();
     }
   }
@@ -73,48 +85,66 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
     const { isMounted } = this.state;
 
     const rootDivClassNames: ICssInput = {
-      'psn-container': true
+      "psn-container": true
     };
     rootDivClassNames[styles.pageSectionsNavigation] = true;
 
-    if (theme === 'dark') {
+    if (theme === "dark") {
       rootDivClassNames[styles.dark] = true;
+    } else if (theme === "theme") {
+      rootDivClassNames[styles.theme] = true;
     }
 
-    const navItems: JSX.Element[] = this.props.anchors.map((anchor, index) => {
-      return <li className={css(styles.navItem, 'psn-navItem')}>
-        <a className={css(styles.navItemLink, 'psn-navItemLink')} onClick={this._onClick.bind(this, anchor)}>{anchor.title}</a>
-      </li>;
+    const navItems: JSX.Element[] = this.props.anchors.map(anchor => {
+      return (
+        <li className={css(styles.navItem, "psn-navItem")}>
+          <a
+            className={css(styles.navItemLink, "psn-navItemLink")}
+            onClick={this._onClick.bind(this, anchor)}
+          >
+            {anchor.title}
+          </a>
+        </li>
+      );
     });
     if (homeItem) {
-      navItems.unshift(<li className={css(styles.navItem, 'psn-navItem')}>
-        <a className={css(styles.navItemLink, 'psn-navItemLink')} onClick={this._onHomeClick.bind(this)}>{homeItem}</a>
-      </li>);
+      navItems.unshift(
+        <li className={css(styles.navItem, "psn-navItem")}>
+          <a
+            className={css(styles.navItemLink, "psn-navItemLink")}
+            onClick={this._onHomeClick.bind(this)}
+          >
+            {homeItem}
+          </a>
+        </li>
+      );
     }
 
+    //
+    // React Portal component is used to render navigation outside of normal div hierarchy
+    //
     return (
       <span ref={this._sectionHostSpanRef}>
-        {
-          isEditMode && <span>{strings.NavigationWebPartPlaceholderText}</span>
-        }
-        {
-          this._layerElement &&
+        {isEditMode && <span>{strings.NavigationWebPartPlaceholderText}</span>}
+        {this._layerElement &&
           isMounted &&
           ReactDOM.createPortal(
             <div className={css(rootDivClassNames)}>
-              <ul className={css(styles.nav, 'psn-nav')} style={{ justifyContent: align }}>
+              <ul
+                className={css(styles.nav, "psn-nav")}
+                style={{ justifyContent: align }}
+              >
                 {navItems}
               </ul>
             </div>,
             this._layerElement
-          )
-        }
-
+          )}
       </span>
     );
   }
 
   private _onHomeClick() {
+    // home click
     if (!this._scrollableParent) {
       this._initScrollParent();
     }
@@ -125,15 +155,19 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
   }
 
   private _onClick(anchor: IAnchorItem, index: number) {
-
+    // click on one of anchor's nav items
     if (anchor.domElement) {
       anchor.domElement.scrollIntoView({
         behavior: this.props.scrollBehavior,
-        block: 'start'
+        block: "start"
       });
     }
   }
 
+  /**
+   * creates layer element to host the navigation outside of normal DOM hierarchy
+   * @param position - current position value
+   */
   private _getLayerElement(position?: NavPosition): HTMLElement | undefined {
     const host = this._getHost(position);
 
@@ -150,8 +184,8 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
           return;
         }
 
-        this._layerElement = doc.createElement('div');
-        this._layerElement.className = css(styles.psnLayer, 'psn-layer');
+        this._layerElement = doc.createElement("div");
+        this._layerElement.className = css(styles.psnLayer, "psn-layer");
 
         host.insertBefore(this._layerElement, host.firstChild);
       }
@@ -162,7 +196,6 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
 
   private _removeLayerElement(): void {
     if (this._layerElement) {
-
       const parentNode = this._layerElement.parentNode;
       if (parentNode) {
         parentNode.removeChild(this._layerElement);
@@ -171,17 +204,23 @@ export class PageSectionsNavigation extends React.Component<IPageSectionsNavigat
     }
   }
 
-  private _getHost(position: NavPosition): Node | undefined {
-
+  /**
+   * gets host DOM element based on position property
+   * @param position - current position value
+   */
+  private _getHost(position?: NavPosition): Node | undefined {
     const navPos = position || this.props.position;
 
     const doc = getDocument();
+    if (!doc) {
+      return undefined;
+    }
+
     let hostNode: Node;
 
-    if (navPos === 'section') {
+    if (navPos === "section") {
       hostNode = doc.getElementById(this._pageCanvasId) as Node;
-    }
-    else {
+    } else {
       hostNode = doc.querySelector(this._pageLayoutSelector) as Node;
     }
 

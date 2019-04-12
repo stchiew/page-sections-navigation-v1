@@ -16,9 +16,10 @@ Maintaining at 1.7.1 to see if the position:sticky polyfill still applies
 
 | Version | Date           | Comments                                                   |
 | ------- | -------------- | ---------------------------------------------------------- |
-| 1.0.0.0 | April 06, 2019 | Initial release                                            |
+| 1.0.0.4 | April 12, 2019 | Added fixes by author on disposing data storage manager    |
+| 1.0.0.2 | April 08, 2019 | Changed z-index of links menu to get behind site mega menu |
 | 1.0.0.1 | April 07, 2019 | Navigate to anchor when Show Title is unchecked            |
-| 1.00.2. | April 08, 2019 | Changed z-index of links menu to get behind site mega menu |
+| 1.0.0.0 | April 06, 2019 | Initial release                                            |
 
 ## Disclaimer
 

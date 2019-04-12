@@ -42,24 +42,35 @@ export class PageSectionsNavigationAnchor extends React.Component<
       anchorElClassNames[styles.offset] = true;
     }
 
-    return (
-      <div className={css(styles.webPartTitle, "psn-anchorTitle")}>
-        <div className={css(anchorElClassNames)} ref={anchorElRef} />
-        {displayMode === DisplayMode.Edit ? (
-          <textarea
-            placeholder={strings.AnchorTitlePlaceholder}
-            aria-label={strings.AnchorTitlePlaceholder}
-            onChange={this._onChange}
-            defaultValue={title}
-          />
-        ) : null}
-        {showTitle ? (
-          <span className={"psn-anchorTitleText"}>{title}</span>
-        ) : null}
-      </div>
-    );
-
-    //return null;
+    if (displayMode === DisplayMode.Edit || showTitle) {
+      return (
+        <div
+          className={css(
+            styles.webPartTitle,
+            styles.visible,
+            "psn-anchorTitle"
+          )}
+        >
+          <div className={css(anchorElClassNames)} ref={anchorElRef} />
+          {displayMode === DisplayMode.Edit ? (
+            <textarea
+              placeholder={strings.AnchorTitlePlaceholder}
+              aria-label={strings.AnchorTitlePlaceholder}
+              onChange={this._onChange}
+              defaultValue={title}
+            />
+          ) : (
+            <span className={"psn-anchorTitleText"}>{title}</span>
+          )}
+        </div>
+      );
+    } else {
+      return (
+        <div className={styles.webPartTitle}>
+          <div className={css(anchorElClassNames)} ref={anchorElRef} />
+        </div>
+      );
+    }
   }
 
   /**

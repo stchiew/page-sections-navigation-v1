@@ -1,23 +1,26 @@
-import * as React from 'react';
-import * as ReactDom from 'react-dom';
-import { Version } from '@microsoft/sp-core-library';
+import * as React from "react";
+import * as ReactDom from "react-dom";
+import { Version } from "@microsoft/sp-core-library";
 import {
   BaseClientSideWebPart,
   IPropertyPaneConfiguration,
-  PropertyPaneTextField,
   PropertyPaneCheckbox
-} from '@microsoft/sp-webpart-base';
+} from "@microsoft/sp-webpart-base";
 
-import * as strings from 'PageSectionsNavigationStrings';
+import * as strings from "PageSectionsNavigationStrings";
 import {
   PageSectionsNavigationAnchor,
   IPageSectionsNavigationAnchorProps
-} from './components/PageSectionsNavigationAnchor';
+} from "./components/PageSectionsNavigationAnchor";
 
-import { IDynamicDataPropertyDefinition, IDynamicDataCallables, IDynamicDataSource } from '@microsoft/sp-dynamic-data';
+import {
+  IDynamicDataPropertyDefinition,
+  IDynamicDataCallables,
+  IDynamicDataSource
+} from "@microsoft/sp-dynamic-data";
 
-import { IAnchorItem } from '../../common/model';
-import { NavPosition } from '../../common/types';
+import { IAnchorItem } from "../../common/model";
+import { NavPosition } from "../../common/types";
 
 export interface IPageSectionsNavigationAnchorWebPartProps {
   title: string;
@@ -25,30 +28,39 @@ export interface IPageSectionsNavigationAnchorWebPartProps {
   showTitle: boolean;
 }
 
-export default class PageSectionsNavigationAnchorWebPart extends BaseClientSideWebPart<IPageSectionsNavigationAnchorWebPartProps> implements IDynamicDataCallables {
-
+export default class PageSectionsNavigationAnchorWebPart
+  extends BaseClientSideWebPart<IPageSectionsNavigationAnchorWebPartProps>
+  implements IDynamicDataCallables {
+  // anchor data object related to the current web part
   private _anchor: IAnchorItem;
-  private _pageNavDataSource: IDynamicDataSource;
+  // "Master" data source
+  private _pageNavDataSource: IDynamicDataSource | undefined;
 
   protected onInit(): Promise<void> {
-
-    const {
-      title,
-      uniqueId
-    } = this.properties;
+    const { title, uniqueId } = this.properties;
 
     this._anchor = {
       title: title,
       uniqueId: uniqueId
     };
 
+    this._initDataSource = this._initDataSource.bind(this); // pr#837
+    this._onPageNavPositionChanged = this._onPageNavPositionChanged.bind(this); // pr#837
+
+    // getting data sources that have already been added on the page
     this._initDataSource();
-    this.context.dynamicDataProvider.registerAvailableSourcesChanged(this._initDataSource.bind(this));
+    // registering for changes in available datasources
+    this.context.dynamicDataProvider.registerAvailableSourcesChanged(
+      this._initDataSource
+    );
+    // registering current web part as a data source
     this.context.dynamicDataSourceManager.initializeSource(this);
 
     if (!uniqueId) {
-      this._anchor.uniqueId = this.properties.uniqueId = `pagenavanchor-${this.context.instanceId}`;
-      this.context.dynamicDataSourceManager.notifyPropertyChanged('anchor');
+      this._anchor.uniqueId = this.properties.uniqueId = `pagenavanchor-${
+        this.context.instanceId
+      }`;
+      this.context.dynamicDataSourceManager.notifyPropertyChanged("anchor");
     }
 
     return super.onInit();
@@ -56,48 +68,76 @@ export default class PageSectionsNavigationAnchorWebPart extends BaseClientSideW
 
   public render(): void {
     const { title, showTitle } = this.properties;
-    const position: NavPosition = this._pageNavDataSource ? this._pageNavDataSource.getPropertyValue('position') : 'top';
-    const element: React.ReactElement<IPageSectionsNavigationAnchorProps> = React.createElement(
-      PageSectionsNavigationAnchor,
-      {
-        displayMode: this.displayMode,
-        title: title,
-        showTitle: showTitle,
-        updateProperty: this._onTitleChanged.bind(this),
-        anchorElRef: (el => {
-          this._anchor.domElement = el; //this.domElement;
-          //this._anchor.scrollTop = this.domElement.scrollTop;
-          this.context.dynamicDataSourceManager.notifyPropertyChanged('anchor');
-        }),
-        navPosition: position
-      }
-    );
+    const position: NavPosition = this._pageNavDataSource
+      ? this._pageNavDataSource.getPropertyValue("position")
+      : "top";
+    const element: React.ReactElement<
+      IPageSectionsNavigationAnchorProps
+    > = React.createElement(PageSectionsNavigationAnchor, {
+      displayMode: this.displayMode,
+      title: title,
+      showTitle: showTitle,
+      updateProperty: this._onTitleChanged.bind(this),
+      anchorElRef: el => {
+        if (!this.isDisposed) {
+          // pr#837
+          // notifying subscribers that the anchor component has been rendered
+          this._anchor.domElement = el;
+          this.context.dynamicDataSourceManager.notifyPropertyChanged("anchor");
+        }
+      },
+      navPosition: position
+    });
 
     ReactDom.render(element, this.domElement);
-
   }
 
-  public getPropertyDefinitions(): ReadonlyArray<IDynamicDataPropertyDefinition> {
-    return [{
-      id: 'anchor',
-      title: 'Anchor'
-    }];
+  /**
+   * implementation of getPropertyDefinitions from IDynamicDataCallables
+   */
+  public getPropertyDefinitions(): ReadonlyArray<
+    IDynamicDataPropertyDefinition
+  > {
+    return [
+      {
+        id: "anchor",
+        title: "Anchor"
+      }
+    ];
   }
+
+  /**
+   * implementation of getPropertyValue from IDynamicDataCallables
+   * @param propertyId property Id
+   */
   public getPropertyValue(propertyId: string): IAnchorItem {
     switch (propertyId) {
-      case 'anchor':
+      case "anchor":
         return this._anchor;
     }
 
-    throw new Error('Bad property id');
+    throw new Error("Bad property id");
   }
 
   protected onDispose(): void {
+    this.context.dynamicDataProvider.unregisterAvailableSourcesChanged(
+      this._initDataSource
+    ); // pr#837
+    if (this._pageNavDataSource) {
+      this.context.dynamicDataProvider.unregisterPropertyChanged(
+        this._pageNavDataSource.id,
+        "position",
+        this._onPageNavPositionChanged
+      );
+      delete this._pageNavDataSource;
+    } // pr#837
     ReactDom.unmountComponentAtNode(this.domElement);
+    delete this._anchor; // pr#837
+    super.onDispose(); // pr#837
   }
 
   protected get dataVersion(): Version {
-    return Version.parse('1.0');
+    return Version.parse("1.0");
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
@@ -105,13 +145,13 @@ export default class PageSectionsNavigationAnchorWebPart extends BaseClientSideW
       pages: [
         {
           header: {
-            description: ''
+            description: ""
           },
           groups: [
             {
               groupName: strings.NavAnchorGroupName,
               groupFields: [
-                PropertyPaneCheckbox('showTitle', {
+                PropertyPaneCheckbox("showTitle", {
                   text: strings.ShowTitleFieldLabel,
                   checked: this.properties.showTitle
                 })
@@ -125,17 +165,32 @@ export default class PageSectionsNavigationAnchorWebPart extends BaseClientSideW
 
   private _onTitleChanged(title: string) {
     this._anchor.title = this.properties.title = title;
-    this.context.dynamicDataSourceManager.notifyPropertyChanged('anchor');
+    // notifying that web part's title has been changed
+    this.context.dynamicDataSourceManager.notifyPropertyChanged("anchor");
   }
 
+  /**
+   * Initializes "master" data source
+   */
   private _initDataSource(): void {
+    // all data sources on the page
     const availableDataSources = this.context.dynamicDataProvider.getAvailableSources();
+    //
+    // searching for "master" data source
+    //
     let hasPageNavDataSource = false;
     for (let i = 0, len = availableDataSources.length; i < len; i++) {
       let dataSource = availableDataSources[i];
-      if (dataSource.getPropertyDefinitions().filter(pd => pd.id === 'position').length) {
+      if (
+        dataSource.getPropertyDefinitions().filter(pd => pd.id === "position")
+          .length
+      ) {
         this._pageNavDataSource = dataSource;
-        this.context.dynamicDataProvider.registerPropertyChanged(dataSource.id, 'position', this._onPageNavPositionChanged.bind(this));
+        this.context.dynamicDataProvider.registerPropertyChanged(
+          dataSource.id,
+          "position",
+          this._onPageNavPositionChanged // pr#837
+        );
         hasPageNavDataSource = true;
         break;
       }
