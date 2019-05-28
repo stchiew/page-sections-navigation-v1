@@ -1,14 +1,14 @@
 import * as React from "react";
 import * as ReactDom from "react-dom";
 import { Version, DisplayMode } from "@microsoft/sp-core-library";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import {
-  BaseClientSideWebPart,
   IPropertyPaneConfiguration,
   PropertyPaneDropdown,
   PropertyPaneChoiceGroup,
   PropertyPaneCheckbox,
   PropertyPaneTextField
-} from "@microsoft/sp-webpart-base";
+} from "@microsoft/sp-property-pane";
 //import { SPComponentLoader } from '@microsoft/sp-loader';
 import * as strings from "PageSectionsNavigationStrings";
 import {
