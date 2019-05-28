@@ -144,7 +144,7 @@ export default class PageSectionsNavigationAnchorWebPart
       pages: [
         {
           header: {
-            description: ""
+            description: "Navigation Anchor Setting"
           },
           groups: [
             {

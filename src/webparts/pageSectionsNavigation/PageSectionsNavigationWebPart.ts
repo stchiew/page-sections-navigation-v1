@@ -7,7 +7,8 @@ import {
   PropertyPaneDropdown,
   PropertyPaneChoiceGroup,
   PropertyPaneCheckbox,
-  PropertyPaneTextField
+  PropertyPaneTextField,
+  PropertyPaneLabel
 } from "@microsoft/sp-property-pane";
 //import { SPComponentLoader } from '@microsoft/sp-loader';
 import * as strings from "PageSectionsNavigationStrings";
@@ -277,6 +278,27 @@ export default class PageSectionsNavigationWebPart
                 PropertyPaneTextField("customCssUrl", {
                   label: strings.CustomCSSLabel,
                   value: customCssUrl
+                })
+              ]
+            }
+          ]
+        },
+        {
+          header: { description: "About this webpart" },
+          groups: [
+            {
+              groupName: "Package Version",
+              groupFields: [
+                PropertyPaneLabel("emptyLabel", {
+                  text: this.manifest.version.toString()
+                })
+              ]
+            },
+            {
+              groupName: "Brought to you by:",
+              groupFields: [
+                PropertyPaneLabel("emptyLabel", {
+                  text: "The Collaboration Specialist@ResMed"
                 })
               ]
             }
