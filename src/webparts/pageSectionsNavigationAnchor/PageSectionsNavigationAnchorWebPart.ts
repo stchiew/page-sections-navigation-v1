@@ -1,12 +1,11 @@
 import * as React from "react";
 import * as ReactDom from "react-dom";
 import { Version } from "@microsoft/sp-core-library";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import {
-  BaseClientSideWebPart,
   IPropertyPaneConfiguration,
   PropertyPaneCheckbox
-} from "@microsoft/sp-webpart-base";
-
+} from "@microsoft/sp-property-pane";
 import * as strings from "PageSectionsNavigationStrings";
 import {
   PageSectionsNavigationAnchor,
@@ -145,7 +144,7 @@ export default class PageSectionsNavigationAnchorWebPart
       pages: [
         {
           header: {
-            description: ""
+            description: "Navigation Anchor Setting"
           },
           groups: [
             {
