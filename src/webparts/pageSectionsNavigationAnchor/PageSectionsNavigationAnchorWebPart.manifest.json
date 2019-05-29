@@ -3,7 +3,7 @@
   "id": "a4e172ec-a30d-456c-b81a-f38e043db5ae",
   "alias": "PageSectionsNavigationAnchorWebPart",
   "componentType": "WebPart",
-
+  "supportedHosts": ["SharePointWebPart"],
   // The "*" signifies that the version should be taken from the package.json
   "version": "*",
   "manifestVersion": 2,
@@ -14,14 +14,18 @@
   "requiresCustomScript": false,
   "supportsFullBleed": true,
 
-  "preconfiguredEntries": [{
-    "groupId": "5c03119e-3074-46fd-976b-c60198311f70", // Other
-    "group": { "default": "Other" },
-    "title": { "default": "Page Sections Navigation Anchor" },
-    "description": { "default": "Web part to create an anchor for Page Sections Navigation" },
-    "officeFabricIconFontName": "MiniLink",
-    "properties": {
-      "description": "Page Sections Navigation Anchor"
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70", // Other
+      "group": { "default": "Other" },
+      "title": { "default": "Page Sections Navigation Anchor" },
+      "description": {
+        "default": "Web part to create an anchor for Page Sections Navigation"
+      },
+      "officeFabricIconFontName": "MiniLink",
+      "properties": {
+        "description": "Page Sections Navigation Anchor"
+      }
     }
-  }]
+  ]
 }

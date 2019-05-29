@@ -1,14 +1,15 @@
 import * as React from "react";
 import * as ReactDom from "react-dom";
 import { Version, DisplayMode } from "@microsoft/sp-core-library";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import {
-  BaseClientSideWebPart,
   IPropertyPaneConfiguration,
   PropertyPaneDropdown,
   PropertyPaneChoiceGroup,
   PropertyPaneCheckbox,
-  PropertyPaneTextField
-} from "@microsoft/sp-webpart-base";
+  PropertyPaneTextField,
+  PropertyPaneLabel
+} from "@microsoft/sp-property-pane";
 //import { SPComponentLoader } from '@microsoft/sp-loader';
 import * as strings from "PageSectionsNavigationStrings";
 import {
@@ -185,7 +186,7 @@ export default class PageSectionsNavigationWebPart
       pages: [
         {
           header: {
-            description: "Collaboration Platform Specialists@ResMed"
+            description: ""
           },
           groups: [
             {
@@ -277,6 +278,30 @@ export default class PageSectionsNavigationWebPart
                 PropertyPaneTextField("customCssUrl", {
                   label: strings.CustomCSSLabel,
                   value: customCssUrl
+                })
+              ]
+            }
+          ]
+        },
+        {
+          header: { description: "About this webpart" },
+          groups: [
+            {
+              groupName: "Package Version",
+              groupFields: [
+                PropertyPaneLabel("emptyLabel", {
+                  text: "v" + this.manifest.version.toString()
+                }),
+                PropertyPaneLabel("emptyLabel", {
+                  text: "bf7b299c-3bac-47cc-9f44-43eb180335d8"
+                })
+              ]
+            },
+            {
+              groupName: "Brought to you by:",
+              groupFields: [
+                PropertyPaneLabel("emptyLabel", {
+                  text: "The Collaboration Specialists@ResMed"
                 })
               ]
             }
