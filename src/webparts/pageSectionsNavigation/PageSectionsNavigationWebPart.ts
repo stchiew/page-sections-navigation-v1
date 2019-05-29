@@ -186,7 +186,7 @@ export default class PageSectionsNavigationWebPart
       pages: [
         {
           header: {
-            description: "Collaboration Platform Specialists@ResMed"
+            description: ""
           },
           groups: [
             {
@@ -290,7 +290,10 @@ export default class PageSectionsNavigationWebPart
               groupName: "Package Version",
               groupFields: [
                 PropertyPaneLabel("emptyLabel", {
-                  text: this.manifest.version.toString()
+                  text: "v" + this.manifest.version.toString()
+                }),
+                PropertyPaneLabel("emptyLabel", {
+                  text: "bf7b299c-3bac-47cc-9f44-43eb180335d8"
                 })
               ]
             },
@@ -298,7 +301,7 @@ export default class PageSectionsNavigationWebPart
               groupName: "Brought to you by:",
               groupFields: [
                 PropertyPaneLabel("emptyLabel", {
-                  text: "The Collaboration Specialist@ResMed"
+                  text: "The Collaboration Specialists@ResMed"
                 })
               ]
             }
