@@ -5,7 +5,6 @@ spFx web part to add sections navigation to the SharePoint page. A clone of the 
 ## Used SharePoint Framework Version
 
 ![drop](https://img.shields.io/badge/drop-1.8.2-green.svg)
-Maintaining at 1.7.1 to see if the position:sticky polyfill still applies
 
 ## Version history
 
@@ -13,7 +12,7 @@ Maintaining at 1.7.1 to see if the position:sticky polyfill still applies
 | ------- | ------------ | --------------- |
 | 1.0.0   | May 31, 2019 | Initial release |
 
-## TO DO for this feature release 1.0.0
+## Feature release 1.0.0
 
 - baseline release
 - copy latest from SP repo
@@ -21,7 +20,6 @@ Maintaining at 1.7.1 to see if the position:sticky polyfill still applies
 - use npm version
 - use gulp dist (clean, build, package-solution)
 - use upload and deploy scripts
-- include psn.css - copy to Site Assets on deploy
 
 ## Features
 
